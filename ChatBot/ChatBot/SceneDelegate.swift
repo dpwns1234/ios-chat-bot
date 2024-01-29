@@ -6,15 +6,32 @@
 //
 
 import UIKit
+import CoreData
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
     
+    private lazy var persistentContainer: NSPersistentContainer = {
+        let container = NSPersistentContainer(name: "ChatModel")
+        container.loadPersistentStores { description, error in
+            if let error = error {
+                fatalError("Unable to load persistent stores: \(error)")
+            }
+        }
+        return container
+    }()
+    
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = ChatViewController()
+        
+        let navigatinoController = UINavigationController(rootViewController: ChatRoomListViewController())
+        window?.rootViewController = navigatinoController
         window?.makeKeyAndVisible()
+        
+        if let roomListViewController = navigatinoController.topViewController as? ChatRoomListViewController {
+            roomListViewController.container = persistentContainer
+        }
     }
     
     func sceneDidDisconnect(_ scene: UIScene) { }

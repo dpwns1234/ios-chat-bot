@@ -8,7 +8,18 @@
 import Foundation
 
 struct Chat: Hashable {
-    let messageID = UUID()
+    var messageID = UUID()
     let sender: Sender
     let message: String
+    
+    init(_ entity: Entity) {
+        messageID = entity.messageID!
+        message = entity.message!
+        sender = Sender(rawValue: entity.sender!)!
+    }
+    
+    init(sender: Sender, message: String) {
+        self.sender = sender
+        self.message = message
+    }
 }
