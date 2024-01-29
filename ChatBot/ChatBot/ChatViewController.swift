@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import CoreData
 
 final class ChatViewController: UIViewController {
     private lazy var collectionView: UICollectionView = {
@@ -66,6 +67,20 @@ final class ChatViewController: UIViewController {
     private let networkManager = NetworkManager()
     private let api = ChatAPI()
     
+    private let container: NSPersistentContainer?
+    private let id: UUID?
+    
+    init(id: UUID?, container: NSPersistentContainer?) {
+        self.id = id
+        self.container = container
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -76,6 +91,29 @@ final class ChatViewController: UIViewController {
         
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleCellTap))
         collectionView.addGestureRecognizer(tapGesture)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(true)
+        var snapshot = dataSource.snapshot()
+        let firstChat = snapshot.itemIdentifiers.first
+        // coreData에 저장
+        guard let context = container?.viewContext else { return }
+        let entity = NSEntityDescription.entity(forEntityName: "ChatRoom", in: context)
+        
+        if let entity {
+            NSManagedObject(entity: entity, insertInto: context).setValuesForKeys([
+                "roomID": self.id,
+                "title": firstChat?.message,
+                "created": Date() // TODO: 첫 채팅 만든 시간으로 바꾸기 (response 확인)
+            ])
+        }
+        
+        do {
+            try context.save()
+        } catch {
+            print(error)
+        }
     }
 }
 
@@ -182,15 +220,34 @@ extension ChatViewController {
     
     private func updateChats(withNew chats: [Chat]) {
         var snapshot = dataSource.snapshot()
+        let appendingChat = chats[0]
         
-        if let lastChat = snapshot.itemIdentifiers(inSection: 0).last {
-            if lastChat.sender == .loading {
-                snapshot.deleteItems([lastChat])
-            }
+        if appendingChat.sender == .assistant {
+            snapshot.deleteItems([snapshot.itemIdentifiers.last!])
         }
+        
         snapshot.appendItems(chats, toSection: 0)
         dataSource.apply(snapshot, animatingDifferences: true)
         moveToLastChat()
+        saveCoreData(appendingChat: appendingChat)
+    }
+    
+    private func saveCoreData(appendingChat: Chat) {
+        guard let context = container?.viewContext else { return }
+        let entity = NSEntityDescription.entity(forEntityName: "Entity", in: context)
+        if let entity {
+            NSManagedObject(entity: entity, insertInto: context).setValuesForKeys([
+                "message": appendingChat.message,
+                "messageID": appendingChat.messageID,
+                "sender": appendingChat.sender.description
+            ])
+            
+            do {
+                try context.save()
+            } catch {
+                print(error)
+            }
+        }
     }
     
     private func makeRequestModel() -> ChatRequestModel {
