@@ -12,10 +12,10 @@ struct Chat: Hashable {
     let sender: Sender
     let message: String
     
-    init(_ entity: Entity) {
-        messageID = entity.messageID!
-        message = entity.message!
-        sender = Sender(rawValue: entity.sender!)!
+    init(_ entity: MessageEntity) {
+        messageID = entity.messageID
+        message = entity.message
+        sender = Sender(rawValue: entity.sender)!
     }
     
     init(sender: Sender, message: String) {
