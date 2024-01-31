@@ -95,24 +95,21 @@ final class ChatViewController: UIViewController {
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(true)
-        var snapshot = dataSource.snapshot()
-        let firstChat = snapshot.itemIdentifiers.first
-        // coreData에 저장
-        guard let context = container?.viewContext else { return }
-        let entity = NSEntityDescription.entity(forEntityName: "ChatRoom", in: context)
         
-        if let entity {
-            NSManagedObject(entity: entity, insertInto: context).setValuesForKeys([
-                "roomID": self.id,
-                "title": firstChat?.message,
-                "created": Date() // TODO: 첫 채팅 만든 시간으로 바꾸기 (response 확인)
-            ])
-        }
-        
-        do {
-            try context.save()
-        } catch {
-            print(error)
+        let chats = dataSource.snapshot().itemIdentifiers
+        if let firstChat = chats.first {
+            // modify
+            let request = ChatRoom.fetchRequest()
+            request.predicate = NSPredicate(format: "roomID = %@", self.id!.uuidString)
+            let result = try! container?.viewContext.fetch(request).first
+            result?.title = firstChat.message
+            try! container?.viewContext.save()
+        } else {
+            // remove
+            let request = ChatRoom.fetchRequest()
+            request.predicate = NSPredicate(format: "roomID = %@", self.id!.uuidString)
+            let obj = try! container?.viewContext.fetch(request).first
+            container?.viewContext.delete(obj!)
         }
     }
 }
@@ -169,24 +166,47 @@ extension ChatViewController {
             return collectionView.dequeueConfiguredReusableCell(using: self.cellRegistration, for: indexPath, item: identifier)
         }
         
+        
         guard let container else { return }
-            // core data fetch
+        let context = container.viewContext
+        // 데이터가 있는 경우
         do {
             let request2 = ChatRoom.fetchRequest()
             request2.predicate = NSPredicate(format: "roomID == %@", id!.uuidString)
-            let room = try container.viewContext.fetch(request2).first!
-            
-            let request = MessageEntity.fetchRequest()
-            request.predicate = NSPredicate(format: "relationship == %@", room)
-//            let chats = try container.viewContext.fetch(request).map(Chat.init)
-            let chats = try container.viewContext.fetch(request).map(Chat.init)
-//            guard let chats else { return }
-            var snapshot = dataSource.snapshot()
-            snapshot.appendSections([0])
-            snapshot.appendItems(chats, toSection: 0)
-            dataSource.apply(snapshot)
+            if let room = try container.viewContext.fetch(request2).first {
+                existRoom(container, room)
+            } else {
+                makeNewRoom(context)
+                try context.save()
+            }
         } catch {
             print(error)
+        }
+    }
+    
+    private func existRoom(_ container: NSPersistentContainer, _ room: ChatRoom) {
+        let request = MessageEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "relationship == %@", room)
+        let chats = try! container.viewContext.fetch(request).map(Chat.init)
+        var snapshot = dataSource.snapshot()
+        snapshot.appendSections([0])
+        snapshot.appendItems(chats, toSection: 0)
+        dataSource.apply(snapshot)
+        
+    }
+    
+    private func makeNewRoom(_ context: NSManagedObjectContext) {
+        var snapshot = dataSource.snapshot()
+        snapshot.appendSections([0])
+        dataSource.apply(snapshot)
+        
+        let entity = NSEntityDescription.entity(forEntityName: "ChatRoom", in: context)
+        if let entity {
+            NSManagedObject(entity: entity, insertInto: context).setValuesForKeys([
+                "roomID": self.id,
+                "title": "",      // TODO: 아직 첫 메세지가 없음.
+                "created": Date() // TODO: 첫 채팅 만든 시간으로 바꾸기 (response 확인)
+            ])
         }
     }
     
@@ -250,9 +270,9 @@ extension ChatViewController {
     
     private func saveCoreData(appendingChat: Chat) {
         guard let context = container?.viewContext else { return }
-        let request2 = ChatRoom.fetchRequest()
-        request2.predicate = NSPredicate(format: "roomID == %@", id!.uuidString)
-        let chats2 = try! container!.viewContext.fetch(request2).first!
+        let roomRequest = ChatRoom.fetchRequest()
+        roomRequest.predicate = NSPredicate(format: "roomID == %@", id!.uuidString)
+        let firstRoom = try! container!.viewContext.fetch(roomRequest).first!
         
         let entity = NSEntityDescription.entity(forEntityName: "Entity", in: context)
         if let entity {
@@ -260,7 +280,7 @@ extension ChatViewController {
                 "message": appendingChat.message,
                 "messageID": appendingChat.messageID,
                 "sender": appendingChat.sender.description,
-                "relationship": chats2
+                "relationship": firstRoom
             ])
             
             do {

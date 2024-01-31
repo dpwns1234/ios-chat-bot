@@ -8,14 +8,6 @@
 import UIKit
 import CoreData
 
-// 역할
-/*
- 1. 채팅방 리스트를 보여준다 (첫번째 채팅(유저)과 생성된 시간을 표시해준다.)
- 2. 왼쪽 상단에 제목과 오른쪽 상단에 새로 채팅방 만드는 기능
- 3. 채팅방(셀)을 클릭했을 때 그 채팅방으로 들어가지는
- 3-1. 채팅방의 identifier만 넘겨주면 되는 방향 -> 그래야 한 뷰컨에서 너무 많은 데이터를 관리, 저장하고 있지 않음.
- */
-
 final class ChatRoomListViewController: UIViewController {
     private lazy var collectionView: UICollectionView = {
         // TODO: why view.bounds?
@@ -37,17 +29,8 @@ final class ChatRoomListViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .white
         view.addSubview(collectionView)
-        navigationController?.navigationBar.prefersLargeTitles = true
-        navigationItem.title = "MyChatBot 🤖"
-        
-        
-        if #available(iOS 16.0, *) {
-            let chatRoomButtonItem = UIBarButtonItem(title: "make", image: .add, target: self, action: #selector(tappedMakeRoomButton))
-            
-            navigationItem.rightBarButtonItem = chatRoomButtonItem
-        } else {
-            // Fallback on earlier versions
-        }
+
+        configureNavigationController()
         setConstraints()
         configureDataSource()
         configureCellResistration()
@@ -57,13 +40,10 @@ final class ChatRoomListViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(true)
         
-        // coreData에서 받아오기 및 apply
         let context = container?.viewContext
         let request = ChatRoom.fetchRequest()
         do {
             guard let chatRoom = try context?.fetch(request) else { return }
-            
-            // apply
             var snapshot = dataSource.snapshot()
             snapshot.appendItems(chatRoom, toSection: 0)
             dataSource.apply(snapshot)
@@ -71,12 +51,11 @@ final class ChatRoomListViewController: UIViewController {
             print(error)
         }
     }
-    
-    @objc
-    private func tappedMakeRoomButton() {
-        let chatRoomVC = ChatViewController(id: UUID(), container: container)
-        navigationController?.pushViewController(chatRoomVC, animated: true)
-    }
+}
+
+// MARK: - CollectionView 초기 설정
+
+extension ChatRoomListViewController {
     
     private func setConstraints() {
         let safeArea = view.safeAreaLayoutGuide
@@ -118,6 +97,31 @@ final class ChatRoomListViewController: UIViewController {
     }
 }
 
+// MARK: - Navigation 초기 설정
+
+extension ChatRoomListViewController {
+    
+    private func configureNavigationController() {
+        navigationController?.navigationBar.prefersLargeTitles = true
+        navigationItem.title = "MyChatBot 🤖"
+        
+        
+        if #available(iOS 16.0, *) {
+            let chatRoomButtonItem = UIBarButtonItem(title: "make", image: .add, target: self, action: #selector(tappedMakeRoomButton))
+            
+            navigationItem.rightBarButtonItem = chatRoomButtonItem
+        } else {
+            // Fallback on earlier versions
+        }
+    }
+    
+    @objc
+    private func tappedMakeRoomButton() {
+        let chatVC = ChatViewController(id: UUID(), container: container)
+        navigationController?.pushViewController(chatVC, animated: true)
+    }
+}
+
 extension ChatRoomListViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         // 방법 1
@@ -127,7 +131,7 @@ extension ChatRoomListViewController: UICollectionViewDelegate {
         // 방법 2
 //        let roomID = dataSource.itemIdentifier(for: indexPath)?.roomID
         
-        let chatRoomVC = ChatViewController(id: roomID, container: container)
-        navigationController?.pushViewController(chatRoomVC, animated: true)
+        let chatVC = ChatViewController(id: roomID, container: container)
+        navigationController?.pushViewController(chatVC, animated: true)
     }
 }
