@@ -111,7 +111,7 @@ final class ChatRoomListViewController: UIViewController {
         cellResistration = ChatRoomCellRegistration { (cell, indexPath, chatRoom) -> Void in
             var content = cell.defaultContentConfiguration()
             content.text = chatRoom.title
-            content.secondaryText = chatRoom.created?.description
+            content.secondaryText = chatRoom.created.description
             
             cell.contentConfiguration = content
         }

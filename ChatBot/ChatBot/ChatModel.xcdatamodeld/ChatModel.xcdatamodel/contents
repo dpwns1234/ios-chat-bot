@@ -4,10 +4,12 @@
         <attribute name="created" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="roomID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="title" optional="YES" attributeType="String"/>
+        <relationship name="relationship" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="MessageEntity" inverseName="relationship" inverseEntity="MessageEntity"/>
     </entity>
-    <entity name="Entity" representedClassName="Entity" syncable="YES">
-        <attribute name="message" optional="YES" attributeType="String"/>
-        <attribute name="messageID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="sender" optional="YES" attributeType="String"/>
+    <entity name="MessageEntity" representedClassName="MessageEntity" syncable="YES">
+        <attribute name="message" attributeType="String" defaultValueString=""/>
+        <attribute name="messageID" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="sender" attributeType="String"/>
+        <relationship name="relationship" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ChatRoom" inverseName="relationship" inverseEntity="ChatRoom"/>
     </entity>
 </model>
